@@ -54,9 +54,13 @@
 
 // -----------------DAY 3 ------------------------
 
-const express = require('express')
+const express = require('express');
 const app = express();
-const db = require('./db')
+const db = require('./db');
+require('dotenv').config();
+
+//accessing PORT variable from .env file if available use PORT value or else use 3000 PORT
+const PORT = process.env.PORT || 3000;
 
 const bodyParser = require('body-parser');
 app.use(bodyParser.json())
@@ -72,6 +76,7 @@ app.use('/person',personRouter)
 const menuRouter = require('./routes/menuItemRoutes')
 app.use('/menuitem',menuRouter)
 
-app.listen(3000, () => {
+
+app.listen(PORT, () => {
     console.log('listening on port 3000')
 });
