@@ -2,9 +2,12 @@ const express = require('express')
 const router = express.Router()
 const Person = require("../models/Person")
 const mongoose = require('mongoose')
+require('dotenv').config();
+
+const {jwtAuthMiddleware,generateToken} = require('../jwt')
 
 //GET method to get a person
-router.get('/',async(req,res)=>{
+router.get('/',jwtAuthMiddleware,async(req,res)=>{
     try{
         const data = await Person.find()
         console.log("Data Fetched")
@@ -17,7 +20,7 @@ router.get('/',async(req,res)=>{
 })
 
 //POST route to add a person
-router.post('/', async (req, res) => {
+router.post('/signup', async (req, res) => {
     try {
         const data = req.body //assuming request body contains the person data
 
@@ -26,11 +29,67 @@ router.post('/', async (req, res) => {
 
         const response = await newPerson.save();
         console.log("Data saved.")
-        res.status(200).json(response)
+
+        const payload = {
+            id:response.id,
+            username:response.username
+        }
+        const token = generateToken(payload)
+
+        res.status(200).json({response:response,token:token})
     }
     catch (error) {
         console.log(error)
         res.status(500).json({err:"internal server error"})
+    }
+})
+
+//login route
+router.post('/login',async(req,res)=>{
+    try{
+        //extract username and password from the request body
+        const {username, password} = req.body
+
+        //find user by username
+        const user = await Person.findOne({username:username})
+
+        //if user does not exist or password does not match return error
+        if(!user || !(await user.comparePassword(password))) 
+        { 
+            return res.status(401).json({error:"Invalid username or password"})
+        }
+
+        //generate token
+        const payload = {
+            id: user.id,
+            username:user.username
+        }
+
+        const token = generateToken(payload);
+
+        //return token as response
+        res.json({token})
+    }
+    catch(err){
+        console.log(err)
+        res.status(500).json({error:"Internal server error"})
+    }
+})
+
+//profile route, get person based on their profile by jwttoken authorization
+router.get('/profile',jwtAuthMiddleware,async(req,res)=>{
+    try{
+         const userData = req.user;
+        console.log("User data: ",userData);
+
+        const userId = userData.id;
+        const user = await Person.findById(userId);
+
+        res.status(200).json({user});
+    }
+    catch(err){
+        console.log(err)
+        res.status(500).json({error:"Internal server error"})
     }
 })
 
